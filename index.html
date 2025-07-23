@@ -407,9 +407,16 @@
             animation: special-pulse 1s infinite alternate;
         }
         
-        @keyframes special-pulse {
+        /* Анимация подсказки */
+        @keyframes hint-pulse {
             0% { transform: scale(1); }
-            100% { transform: scale(1.1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        
+        .hint {
+            animation: hint-pulse 1s ease-in-out infinite;
+            box-shadow: 0 0 15px gold;
         }
     </style>
 </head>
@@ -444,6 +451,7 @@
         
         <div class="controls">
             <button id="newGameBtn">Новая игра</button>
+            <button id="hintBtn">Подсказка</button>
         </div>
         
         <div class="best-score">
@@ -495,11 +503,19 @@
         </div>
     </div>
     
+    <div class="modal hidden" id="pauseModal">
+        <div class="modal-content">
+            <h2>ПАУЗА</h2>
+            <p>Игра приостановлена</p>
+            <button id="resumeBtn">Продолжить</button>
+        </div>
+    </div>
+    
     <div class="level-up hidden" id="levelUp">УРОВЕНЬ ПРОЙДЕН!</div>
 
     <script>
         // Игровые константы
-        const BOARD_SIZE = 6; // Уменьшили с 8 до 6
+        const BOARD_SIZE = 6;
         const CANDY_TYPES = 6;
         const LEVEL_TARGET_MULTIPLIER = 1.5;
         const OBSTACLES = {
@@ -531,8 +547,12 @@
             touchStartTime: 0,
             obstacles: [],
             tutorialShown: false,
-            fallFrom: {}
+            fallFrom: {},
+            isPaused: false
         };
+        
+        // Очередь активации спецконфет
+        let activationQueue = [];
         
         // Элементы DOM
         const gameBoard = document.getElementById('gameBoard');
@@ -549,6 +569,9 @@
         const bestScoreElement = document.getElementById('bestScore');
         const tutorialModal = document.getElementById('tutorialModal');
         const tutorialBtn = document.getElementById('tutorialBtn');
+        const pauseModal = document.getElementById('pauseModal');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const hintBtn = document.getElementById('hintBtn');
         
         // Инициализация игры
         function initGame() {
@@ -574,14 +597,29 @@
                 }
             });
             
+            resumeBtn.addEventListener('click', () => {
+                pauseModal.classList.add('hidden');
+                gameState.isPaused = false;
+            });
+            
+            hintBtn.addEventListener('click', showHints);
+            
             // Добавляем обработчики свайпов
             gameBoard.addEventListener('touchstart', handleTouchStart, { passive: false });
             gameBoard.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            // Обработчик паузы при сворачивании окна
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden' && !gameState.isProcessing && !gameState.isPaused) {
+                    gameState.isPaused = true;
+                    pauseModal.classList.remove('hidden');
+                }
+            });
         }
         
         // Обработка начала касания
         function handleTouchStart(e) {
-            if (gameState.isProcessing) return;
+            if (gameState.isProcessing || gameState.isPaused) return;
             
             const touch = e.touches[0];
             gameState.touchStartX = touch.clientX;
@@ -605,7 +643,7 @@
         
         // Обработка окончания касания
         function handleTouchEnd(e) {
-            if (gameState.isProcessing || !gameState.selectedCandy) return;
+            if (gameState.isProcessing || !gameState.selectedCandy || gameState.isPaused) return;
             
             const touch = e.changedTouches[0];
             const endX = touch.clientX;
@@ -662,6 +700,12 @@
                         if (gameState.score > gameState.bestScore) {
                             gameState.bestScore = gameState.score;
                         }
+                        
+                        // Сбрасываем временные флаги
+                        gameState.isProcessing = false;
+                        gameState.isSwapping = false;
+                        gameState.selectedCandy = null;
+                        gameState.isPaused = false;
                     }
                 } catch (e) {
                     console.error('Ошибка загрузки состояния игры:', e);
@@ -672,6 +716,7 @@
             // Скрываем модальные окна при загрузке
             levelCompleteModal.classList.add('hidden');
             tutorialModal.classList.add('hidden');
+            pauseModal.classList.add('hidden');
         }
         
         // Сохранение состояния игры в localStorage
@@ -717,6 +762,7 @@
             gameState.obstacles = [];
             gameState.tutorialShown = false;
             gameState.fallFrom = {};
+            gameState.isPaused = false;
             
             generateBoard();
             updateUI();
@@ -929,7 +975,9 @@
                         }
                     }
                     
-                    cell.addEventListener('click', () => selectCandy(row, col));
+                    cell.addEventListener('click', () => {
+                        if (!gameState.isPaused) selectCandy(row, col);
+                    });
                     gameBoard.appendChild(cell);
                 }
             }
@@ -1016,11 +1064,16 @@
                     cell.appendChild(stone);
                 }
             }
+            
+            // Добавляем обработчик клика
+            cell.addEventListener('click', () => {
+                if (!gameState.isPaused) selectCandy(row, col);
+            });
         }
         
         // Выбор конфеты
         function selectCandy(row, col) {
-            if (gameState.isProcessing) return;
+            if (gameState.isProcessing || gameState.isPaused) return;
             
             // Проверяем, является ли выбранная ячейка специальной конфетой
             const candyValue = gameState.board[row][col];
@@ -1090,7 +1143,7 @@
         
         // Активация специальной конфеты
         function activateSpecial(row, col, type) {
-            if (gameState.isProcessing) return;
+            if (gameState.isProcessing || gameState.isPaused) return;
             
             gameState.isProcessing = true;
             
@@ -1105,7 +1158,11 @@
             switch(type) {
                 case SPECIAL_CANDIES.BOMB: // Бомбочка
                     // Взрываем соседние клетки
-                    const bombDirections = [[-1, 0], [1, 0], [0, -1], [0, 1]]; // Верх, низ, лево, право
+                    const bombDirections = [
+                        [-1, -1], [-1, 0], [-1, 1],
+                        [0, -1],           [0, 1],
+                        [1, -1],  [1, 0],  [1, 1]
+                    ];
                     bombDirections.forEach(([dx, dy]) => {
                         const newRow = row + dx;
                         const newCol = col + dy;
@@ -1145,10 +1202,19 @@
                     break;
             }
             
+            // Находим другие спецконфеты для каскадной активации
+            const nextSpecials = [];
+            
             // Удаляем конфеты и препятствия
             cellsToRemove.forEach(([r, c]) => {
-                gameState.board[r][c] = 0;
-                removeObstacle(r, c);
+                // Для спецконфет (кроме активируемой) - добавляем в очередь
+                if (gameState.board[r][c] >= 50 && !(r === row && c === col)) {
+                    nextSpecials.push([r, c, gameState.board[r][c]]);
+                } else {
+                    // Обычные конфеты удаляем
+                    gameState.board[r][c] = 0;
+                    removeObstacle(r, c);
+                }
                 updateCell(r, c);
                 
                 // Анимация удаления
@@ -1164,14 +1230,26 @@
                 }
             });
             
+            // Добавляем спецконфеты в очередь
+            nextSpecials.forEach(([r, c, t]) => {
+                activationQueue.push({row: r, col: c, type: t});
+            });
+            
             // Добавляем очки
             gameState.score += scoreToAdd;
             updateUI();
             
-            // Сдвигаем конфеты
-            setTimeout(() => {
-                dropCandies();
-            }, 300);
+            // Обработка очереди
+            if (activationQueue.length > 0) {
+                setTimeout(() => {
+                    const next = activationQueue.shift();
+                    activateSpecial(next.row, next.col, next.type);
+                }, 500);
+            } else {
+                setTimeout(() => {
+                    dropCandies();
+                }, 300);
+            }
         }
         
         // Обмен конфет местами с анимацией
@@ -1254,6 +1332,35 @@
                 }
             }
             
+            // Поиск квадратов 2x2
+            for (let row = 0; row < BOARD_SIZE - 1; row++) {
+                for (let col = 0; col < BOARD_SIZE - 1; col++) {
+                    const candyType = gameState.board[row][col];
+                    if (!candyType || candyType >= 50) continue;
+                    
+                    if (candyType === gameState.board[row][col+1] &&
+                        candyType === gameState.board[row+1][col] &&
+                        candyType === gameState.board[row+1][col+1]) {
+                        
+                        const square = [
+                            [row, col], [row, col+1],
+                            [row+1, col], [row+1, col+1]
+                        ];
+                        
+                        // Проверка на пересечение с другими совпадениями
+                        let isNew = true;
+                        square.forEach(([r, c]) => {
+                            if (visited.has(`${r},${c}`)) isNew = false;
+                        });
+                        
+                        if (isNew) {
+                            matches.push(square);
+                            square.forEach(([r, c]) => visited.add(`${r},${c}`));
+                        }
+                    }
+                }
+            }
+            
             return matches;
         }
         
@@ -1278,13 +1385,9 @@
                 totalScore += matchScore;
                 
                 // Создаем специальную конфету для совпадений из 4 и более конфет
+                let specialType = null;
                 if (match.length >= 4) {
-                    // Выбираем центр совпадения для создания специальной конфеты
-                    const centerIndex = Math.floor(match.length / 2);
-                    const [centerRow, centerCol] = match[centerIndex];
-                    
                     // Определяем тип специальной конфеты
-                    let specialType;
                     if (match.length >= 5) {
                         // Для 5+ конфет создаем бомбочку
                         specialType = SPECIAL_CANDIES.BOMB;
@@ -1300,6 +1403,10 @@
                             specialType = Math.random() < 0.5 ? SPECIAL_CANDIES.ARROW_UP : SPECIAL_CANDIES.ARROW_DOWN;
                         }
                     }
+                    
+                    // Выбираем центр совпадения для создания специальной конфеты
+                    const centerRow = Math.floor(match.reduce((sum, [r]) => sum + r, 0) / match.length);
+                    const centerCol = Math.floor(match.reduce((sum, [, c]) => sum + c, 0) / match.length);
                     
                     specialCells.push({
                         row: centerRow,
@@ -1519,9 +1626,50 @@
             saveGameState();
         }
         
-        // Проверка наличия возможных ходов
-        function hasMoves() {
-            // Временная копия доски
+        // Показать подсказки
+        function showHints() {
+            if (gameState.isProcessing || gameState.isPaused) return;
+            
+            // Снимаем предыдущие подсказки
+            document.querySelectorAll('.hint').forEach(el => {
+                el.classList.remove('hint');
+            });
+            
+            // Находим возможные ходы
+            const moves = findPossibleMoves();
+            if (moves.length === 0) return;
+            
+            // Показываем первые 3 хода
+            showNextHint(moves, 0);
+        }
+        
+        // Показать следующую подсказку
+        function showNextHint(moves, index) {
+            if (index >= moves.length || index >= 3) return;
+            
+            const [row1, col1, row2, col2] = moves[index];
+            const cell1 = document.querySelector(`.cell[data-row="${row1}"][data-col="${col1}"]`);
+            const cell2 = document.querySelector(`.cell[data-row="${row2}"][data-col="${col2}"]`);
+            
+            if (cell1 && cell2) {
+                cell1.classList.add('hint');
+                cell2.classList.add('hint');
+                
+                setTimeout(() => {
+                    cell1.classList.remove('hint');
+                    cell2.classList.remove('hint');
+                    
+                    // Показываем следующую подсказку
+                    setTimeout(() => {
+                        showNextHint(moves, index + 1);
+                    }, 300);
+                }, 1000);
+            }
+        }
+        
+        // Найти возможные ходы
+        function findPossibleMoves() {
+            const moves = [];
             const tempBoard = JSON.parse(JSON.stringify(gameState.board));
             
             // Проверяем все возможные обмены
@@ -1537,7 +1685,7 @@
                         
                         // Проверяем, есть ли совпадения
                         if (checkMatchesForBoard(tempBoard).length > 0) {
-                            return true;
+                            moves.push([row, col, row, col+1]);
                         }
                         
                         // Возвращаем обратно
@@ -1554,7 +1702,7 @@
                         
                         // Проверяем, есть ли совпадения
                         if (checkMatchesForBoard(tempBoard).length > 0) {
-                            return true;
+                            moves.push([row, col, row+1, col]);
                         }
                         
                         // Возвращаем обратно
@@ -1563,7 +1711,7 @@
                 }
             }
             
-            return false;
+            return moves;
         }
         
         // Проверка совпадений для заданной доски
@@ -1632,6 +1780,11 @@
             }
             
             return matches;
+        }
+        
+        // Проверка наличия возможных ходов
+        function hasMoves() {
+            return findPossibleMoves().length > 0;
         }
         
         // Запуск игры при загрузке страницы
