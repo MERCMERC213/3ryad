@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Игра 3 в ряд - Исправлено!</title>
+    <title>Игра 3 в ряд</title>
     <style>
         * {
             margin: 0;
@@ -497,50 +497,13 @@
             background: #333;
             border-radius: 50%;
         }
-        
-        .fix-info {
-            background: rgba(255, 100, 100, 0.2);
-            border-radius: 10px;
-            padding: 10px;
-            margin-top: 15px;
-            border: 1px solid rgba(255, 100, 100, 0.5);
-        }
-        
-        .fix-info h3 {
-            color: #ff9999;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-        
-        .fix-info ul {
-            text-align: left;
-            padding-left: 20px;
-            font-size: 0.9rem;
-            color: #ffcccc;
-        }
-        
-        .fix-info li {
-            margin-bottom: 5px;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>ТРИ В РЯД</h1>
-            <p>Исправленная версия</p>
         </header>
-        
-        <div class="fix-info">
-            <h3>Исправленные проблемы:</h3>
-            <ul>
-                <li>Кнопка "Новая игра" теперь работает</li>
-                <li>Все иконки можно двигать</li>
-                <li>Совпадения удаляются автоматически</li>
-                <li>Поле 8x8 полностью заполняется</li>
-                <li>Улучшена логика игры</li>
-            </ul>
-        </div>
         
         <div class="game-info">
             <div class="info-item">
@@ -927,7 +890,7 @@
             const boardSize = getBoardSize();
             let validBoard = false;
             let attempts = 0;
-            const maxAttempts = 100; // Увеличим количество попыток
+            const maxAttempts = 50;
             
             // Инициализация массива
             gameState.board = [];
@@ -983,12 +946,13 @@
                 // Добавляем препятствия в зависимости от уровня
                 addObstacles();
                 
-                // Проверяем наличие ходов и отсутствие совпадений
-                validBoard = hasMoves() && findMatches().length === 0;
+                // Проверяем наличие ходов
+                validBoard = hasMoves();
             }
             
             if (!validBoard) {
                 console.log("Не удалось создать валидное поле после " + maxAttempts + " попыток. Перестраиваем...");
+                // Если не удалось - генерируем простое поле без проверки
                 generateSimpleBoard();
             }
         }
@@ -1005,9 +969,6 @@
             
             // Добавляем препятствия
             addObstacles();
-            
-            // Удаляем начальные совпадения
-            processInitialMatches();
         }
         
         // Добавление препятствий
@@ -1106,13 +1067,40 @@
                     
                     // Добавляем конфету (если есть)
                     if (candyValue > 0) {
-                        const candy = document.createElement('div');
+                        const candy = document.createElement('img');
                         candy.className = 'candy';
-                        candy.style.backgroundColor = getCandyColor(candyValue);
                         
                         // Проверяем, является ли конфета специальной
                         if (candyValue >= 50) {
                             candy.classList.add('special');
+                            switch(candyValue) {
+                                case SPECIAL_CANDIES.BOMB:
+                                    candy.src = 'bomb.png';
+                                    candy.alt = 'Бомбочка';
+                                    break;
+                                case SPECIAL_CANDIES.ARROW_UP:
+                                    candy.src = 'arrow_up.png';
+                                    candy.alt = 'Стрелка вверх';
+                                    break;
+                                case SPECIAL_CANDIES.ARROW_RIGHT:
+                                    candy.src = 'arrow_right.png';
+                                    candy.alt = 'Стрелка вправо';
+                                    break;
+                                case SPECIAL_CANDIES.ARROW_DOWN:
+                                    candy.src = 'arrow_down.png';
+                                    candy.alt = 'Стрелка вниз';
+                                    break;
+                                case SPECIAL_CANDIES.ARROW_LEFT:
+                                    candy.src = 'arrow_left.png';
+                                    candy.alt = 'Стрелка влево';
+                                    break;
+                                default:
+                                    candy.src = `candy${candyValue}.png`;
+                                    candy.alt = `Конфета ${candyValue}`;
+                            }
+                        } else {
+                            candy.src = `candy${candyValue}.png`;
+                            candy.alt = `Конфета ${candyValue}`;
                         }
                         
                         cell.appendChild(candy);
@@ -1157,22 +1145,107 @@
             }
         }
         
-        // Получить цвет конфеты
-        function getCandyColor(type) {
-            const colors = [
-                '#FF5252', // красный
-                '#FFD740', // желтый
-                '#69F0AE', // зеленый
-                '#40C4FF', // голубой
-                '#7C4DFF', // фиолетовый
-                '#FF4081', // розовый
-            ];
+        // Обновление конкретной ячейки
+        function updateCell(row, col) {
+            const boardSize = getBoardSize();
+            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+            if (!cell) return;
             
-            if (type >= 50) {
-                return '#000000'; // специальные конфеты - черные
+            cell.innerHTML = '';
+            
+            const candyValue = gameState.board[row][col];
+            
+            // Добавляем конфету (если есть)
+            if (candyValue > 0) {
+                const candy = document.createElement('img');
+                candy.className = 'candy';
+                
+                // Проверяем, является ли конфета специальной
+                if (candyValue >= 50) {
+                    candy.classList.add('special');
+                    switch(candyValue) {
+                        case SPECIAL_CANDIES.BOMB:
+                            candy.src = 'bomb.png';
+                            candy.alt = 'Бомбочка';
+                            break;
+                        case SPECIAL_CANDIES.ARROW_UP:
+                            candy.src = 'arrow_up.png';
+                            candy.alt = 'Стрелка вверх';
+                            break;
+                        case SPECIAL_CANDIES.ARROW_RIGHT:
+                            candy.src = 'arrow_right.png';
+                            candy.alt = 'Стрелка вправо';
+                            break;
+                        case SPECIAL_CANDIES.ARROW_DOWN:
+                            candy.src = 'arrow_down.png';
+                            candy.alt = 'Стрелка вниз';
+                            break;
+                        case SPECIAL_CANDIES.ARROW_LEFT:
+                            candy.src = 'arrow_left.png';
+                            candy.alt = 'Стрелка влево';
+                            break;
+                        default:
+                            candy.src = `candy${candyValue}.png`;
+                            candy.alt = `Конфета ${candyValue}`;
+                    }
+                } else {
+                    candy.src = `candy${candyValue}.png`;
+                    candy.alt = `Конфета ${candyValue}`;
+                }
+                
+                // Анимация падения
+                if (gameState.fallFrom[`${row},${col}`]) {
+                    const [fromRow] = gameState.fallFrom[`${row},${col}`];
+                    const distance = row - fromRow;
+                    candy.style.transform = `translateY(${-distance * 100}%)`;
+                    candy.classList.add('falling');
+                    
+                    setTimeout(() => {
+                        candy.style.transform = 'translateY(0)';
+                        setTimeout(() => {
+                            candy.classList.remove('falling');
+                        }, 300);
+                    }, 10);
+                }
+                
+                cell.appendChild(candy);
             }
             
-            return colors[(type - 1) % colors.length];
+            // Добавляем препятствия
+            const obstacle = getObstacleAt(row, col);
+            if (obstacle) {
+                if (obstacle.type === OBSTACLES.ICE) {
+                    const iceOverlay = document.createElement('div');
+                    iceOverlay.className = 'ice-overlay';
+                    cell.appendChild(iceOverlay);
+                } else if (obstacle.type === OBSTACLES.STONE) {
+                    const stone = document.createElement('div');
+                    stone.className = 'stone';
+                    const stoneInner = document.createElement('div');
+                    stoneInner.className = 'stone-inner';
+                    stone.appendChild(stoneInner);
+                    cell.appendChild(stone);
+                } else if (obstacle.type === OBSTACLES.LAVA) {
+                    const lava = document.createElement('div');
+                    lava.className = 'lava';
+                    const lavaInner = document.createElement('div');
+                    lavaInner.className = 'lava-inner';
+                    lava.appendChild(lavaInner);
+                    cell.appendChild(lava);
+                } else if (obstacle.type === OBSTACLES.LOCK) {
+                    const lock = document.createElement('div');
+                    lock.className = 'lock';
+                    const lockIcon = document.createElement('div');
+                    lockIcon.className = 'lock-icon';
+                    lock.appendChild(lockIcon);
+                    cell.appendChild(lock);
+                }
+            }
+            
+            // Добавляем обработчик клика
+            cell.addEventListener('click', () => {
+                if (!gameState.isPaused) selectCandy(row, col);
+            });
         }
         
         // Выбор конфеты
@@ -1347,6 +1420,7 @@
                     gameState.board[r][c] = 0;
                     removeObstacle(r, c);
                 }
+                updateCell(r, c);
                 
                 // Анимация удаления
                 const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
@@ -1391,101 +1465,11 @@
             gameState.board[row2][col2] = temp;
             
             // Обновляем отображение
-            const cell1 = document.querySelector(`.cell[data-row="${row1}"][data-col="${col1}"]`);
-            const cell2 = document.querySelector(`.cell[data-row="${row2}"][data-col="${col2}"]`);
+            updateCell(row1, col1);
+            updateCell(row2, col2);
             
-            if (cell1 && cell2) {
-                // Анимация обмена
-                cell1.style.transform = `translate(${(col2 - col1) * 100}%, ${(row2 - row1) * 100}%)`;
-                cell2.style.transform = `translate(${(col1 - col2) * 100}%, ${(row1 - row2) * 100}%)`;
-                
-                setTimeout(() => {
-                    cell1.style.transform = '';
-                    cell2.style.transform = '';
-                    
-                    // Обновляем содержимое ячеек
-                    cell1.innerHTML = '';
-                    cell2.innerHTML = '';
-                    
-                    // Добавляем конфеты
-                    const candy1 = document.createElement('div');
-                    candy1.className = 'candy';
-                    candy1.style.backgroundColor = getCandyColor(gameState.board[row1][col1]);
-                    cell1.appendChild(candy1);
-                    
-                    const candy2 = document.createElement('div');
-                    candy2.className = 'candy';
-                    candy2.style.backgroundColor = getCandyColor(gameState.board[row2][col2]);
-                    cell2.appendChild(candy2);
-                    
-                    // Добавляем препятствия
-                    const obstacle1 = getObstacleAt(row1, col1);
-                    const obstacle2 = getObstacleAt(row2, col2);
-                    
-                    if (obstacle1) {
-                        if (obstacle1.type === OBSTACLES.ICE) {
-                            const iceOverlay = document.createElement('div');
-                            iceOverlay.className = 'ice-overlay';
-                            cell1.appendChild(iceOverlay);
-                        } else if (obstacle1.type === OBSTACLES.STONE) {
-                            const stone = document.createElement('div');
-                            stone.className = 'stone';
-                            const stoneInner = document.createElement('div');
-                            stoneInner.className = 'stone-inner';
-                            stone.appendChild(stoneInner);
-                            cell1.appendChild(stone);
-                        } else if (obstacle1.type === OBSTACLES.LAVA) {
-                            const lava = document.createElement('div');
-                            lava.className = 'lava';
-                            const lavaInner = document.createElement('div');
-                            lavaInner.className = 'lava-inner';
-                            lava.appendChild(lavaInner);
-                            cell1.appendChild(lava);
-                        } else if (obstacle1.type === OBSTACLES.LOCK) {
-                            const lock = document.createElement('div');
-                            lock.className = 'lock';
-                            const lockIcon = document.createElement('div');
-                            lockIcon.className = 'lock-icon';
-                            lock.appendChild(lockIcon);
-                            cell1.appendChild(lock);
-                        }
-                    }
-                    
-                    if (obstacle2) {
-                        if (obstacle2.type === OBSTACLES.ICE) {
-                            const iceOverlay = document.createElement('div');
-                            iceOverlay.className = 'ice-overlay';
-                            cell2.appendChild(iceOverlay);
-                        } else if (obstacle2.type === OBSTACLES.STONE) {
-                            const stone = document.createElement('div');
-                            stone.className = 'stone';
-                            const stoneInner = document.createElement('div');
-                            stoneInner.className = 'stone-inner';
-                            stone.appendChild(stoneInner);
-                            cell2.appendChild(stone);
-                        } else if (obstacle2.type === OBSTACLES.LAVA) {
-                            const lava = document.createElement('div');
-                            lava.className = 'lava';
-                            const lavaInner = document.createElement('div');
-                            lavaInner.className = 'lava-inner';
-                            lava.appendChild(lavaInner);
-                            cell2.appendChild(lava);
-                        } else if (obstacle2.type === OBSTACLES.LOCK) {
-                            const lock = document.createElement('div');
-                            lock.className = 'lock';
-                            const lockIcon = document.createElement('div');
-                            lockIcon.className = 'lock-icon';
-                            lock.appendChild(lockIcon);
-                            cell2.appendChild(lock);
-                        }
-                    }
-                    
-                    // Вызываем callback после анимации
-                    callback();
-                }, 200);
-            } else {
-                callback();
-            }
+            // Вызываем callback после небольшой задержки для анимации
+            setTimeout(callback, 200);
         }
         
         // Поиск совпадений
@@ -1755,12 +1739,14 @@
                     // Удаляем только если нет препятствия или препятствие было разрушено
                     if (!getObstacleAt(row, col)) {
                         gameState.board[row][col] = 0;
+                        updateCell(row, col);
                     }
                 });
                 
                 // Добавляем специальные конфеты
                 specialCells.forEach(({row, col, type}) => {
                     gameState.board[row][col] = type;
+                    updateCell(row, col);
                 });
                 
                 // Сдвигаем конфеты
@@ -1812,7 +1798,11 @@
             
             if (moved) {
                 // Обновляем все ячейки с анимацией
-                renderBoard();
+                for (let row = 0; row < boardSize; row++) {
+                    for (let col = 0; col < boardSize; col++) {
+                        updateCell(row, col);
+                    }
+                }
                 
                 setTimeout(() => {
                     // Проверяем новые совпадения
@@ -1845,46 +1835,6 @@
                 gameState.isProcessing = false;
                 gameState.isSwapping = false;
                 gameState.selectedCandy = null;
-            }
-        }
-        
-        // Удаление начальных совпадений
-        function processInitialMatches() {
-            let matches = findMatches();
-            while (matches.length > 0) {
-                // Удаляем совпадения без анимации
-                const matchedCells = [];
-                
-                matches.forEach(match => {
-                    match.forEach(([row, col]) => {
-                        if (!matchedCells.some(cell => cell[0] === row && cell[1] === col)) {
-                            matchedCells.push([row, col]);
-                            gameState.board[row][col] = 0;
-                            removeObstacle(row, col);
-                        }
-                    });
-                });
-                
-                // Заполняем пустоты
-                for (let col = 0; col < gameState.board[0].length; col++) {
-                    let emptySpaces = 0;
-                    for (let row = gameState.board.length - 1; row >= 0; row--) {
-                        if (gameState.board[row][col] === 0) {
-                            emptySpaces++;
-                        } else if (emptySpaces > 0) {
-                            gameState.board[row + emptySpaces][col] = gameState.board[row][col];
-                            gameState.board[row][col] = 0;
-                        }
-                    }
-                    
-                    // Заполняем верхние пустые ячейки
-                    for (let row = 0; row < emptySpaces; row++) {
-                        gameState.board[row][col] = Math.floor(Math.random() * CANDY_TYPES) + 1;
-                    }
-                }
-                
-                // Проверяем снова
-                matches = findMatches();
             }
         }
         
