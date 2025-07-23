@@ -94,7 +94,7 @@
             background: linear-gradient(to right, #00c9ff, #92fe9d);
             border-radius: 8px;
             width: 0%;
-            transition: width 0.5s ease;
+            transition: width 0.3s ease;
             position: relative;
             overflow: hidden;
         }
@@ -107,7 +107,7 @@
             right: 0;
             bottom: 0;
             background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            animation: progress-shine 2s infinite;
+            animation: progress-shine 1.5s infinite;
         }
         
         @keyframes progress-shine {
@@ -123,8 +123,8 @@
         
         .game-board {
             display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 4px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
             background: rgba(0, 0, 0, 0.3);
             padding: 12px;
             border-radius: 12px;
@@ -143,7 +143,7 @@
             cursor: pointer;
             overflow: hidden;
             background: rgba(50, 50, 50, 0.3);
-            transition: transform 0.2s;
+            transition: transform 0.15s;
         }
         
         .cell::before {
@@ -165,10 +165,10 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             z-index: 2;
             position: absolute;
-            transition: transform 0.5s ease;
+            transition: transform 0.3s ease;
         }
         
         .controls {
@@ -249,7 +249,7 @@
             height: 100%;
             background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
             border-radius: 50%;
-            animation: match-pulse 0.5s ease-out;
+            animation: match-pulse 0.3s ease-out;
             z-index: 10;
         }
         
@@ -259,7 +259,7 @@
         }
         
         .fall-animation {
-            animation: fall 0.5s ease-in;
+            animation: fall 0.3s ease-in;
         }
         
         @keyframes fall {
@@ -276,7 +276,7 @@
             font-weight: bold;
             color: #00ffcc;
             text-shadow: 0 0 15px #00ffcc;
-            animation: level-up 1.5s ease-out;
+            animation: level-up 1s ease-out;
             opacity: 0;
             z-index: 100;
             pointer-events: none;
@@ -400,7 +400,16 @@
         
         .falling {
             z-index: 20;
-            transition: transform 0.5s cubic-bezier(0.5, 0, 0.5, 1);
+            transition: transform 0.3s cubic-bezier(0.5, 0, 0.5, 1);
+        }
+        
+        .special {
+            animation: special-pulse 1s infinite alternate;
+        }
+        
+        @keyframes special-pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
         }
     </style>
 </head>
@@ -490,12 +499,21 @@
 
     <script>
         // Игровые константы
-        const BOARD_SIZE = 8;
+        const BOARD_SIZE = 6; // Уменьшили с 8 до 6
         const CANDY_TYPES = 6;
         const LEVEL_TARGET_MULTIPLIER = 1.5;
         const OBSTACLES = {
             ICE: 100,
             STONE: 101
+        };
+        
+        // Специальные конфеты
+        const SPECIAL_CANDIES = {
+            BOMB: 50,
+            ARROW_UP: 51,
+            ARROW_RIGHT: 52,
+            ARROW_DOWN: 53,
+            ARROW_LEFT: 54
         };
         
         // Состояние игры
@@ -513,7 +531,7 @@
             touchStartTime: 0,
             obstacles: [],
             tutorialShown: false,
-            fallFrom: {} // Для хранения начальных позиций падающих конфет
+            fallFrom: {}
         };
         
         // Элементы DOM
@@ -580,6 +598,9 @@
                     selectCandy(row, col);
                 }
             }
+            
+            // Предотвращаем прокрутку страницы при касании игрового поля
+            e.preventDefault();
         }
         
         // Обработка окончания касания
@@ -647,6 +668,10 @@
                     resetGame();
                 }
             }
+            
+            // Скрываем модальные окна при загрузке
+            levelCompleteModal.classList.add('hidden');
+            tutorialModal.classList.add('hidden');
         }
         
         // Сохранение состояния игры в localStorage
@@ -844,12 +869,46 @@
                     cell.dataset.row = row;
                     cell.dataset.col = col;
                     
+                    const candyValue = gameState.board[row][col];
+                    
                     // Добавляем конфету (если есть)
-                    if (gameState.board[row][col] > 0) {
+                    if (candyValue > 0) {
                         const candy = document.createElement('img');
                         candy.className = 'candy';
-                        candy.src = `candy${gameState.board[row][col]}.png`;
-                        candy.alt = `Конфета ${gameState.board[row][col]}`;
+                        
+                        // Проверяем, является ли конфета специальной
+                        if (candyValue >= 50) {
+                            candy.classList.add('special');
+                            switch(candyValue) {
+                                case SPECIAL_CANDIES.BOMB:
+                                    candy.src = 'bomb.png';
+                                    candy.alt = 'Бомбочка';
+                                    break;
+                                case SPECIAL_CANDIES.ARROW_UP:
+                                    candy.src = 'arrow_up.png';
+                                    candy.alt = 'Стрелка вверх';
+                                    break;
+                                case SPECIAL_CANDIES.ARROW_RIGHT:
+                                    candy.src = 'arrow_right.png';
+                                    candy.alt = 'Стрелка вправо';
+                                    break;
+                                case SPECIAL_CANDIES.ARROW_DOWN:
+                                    candy.src = 'arrow_down.png';
+                                    candy.alt = 'Стрелка вниз';
+                                    break;
+                                case SPECIAL_CANDIES.ARROW_LEFT:
+                                    candy.src = 'arrow_left.png';
+                                    candy.alt = 'Стрелка влево';
+                                    break;
+                                default:
+                                    candy.src = `candy${candyValue}.png`;
+                                    candy.alt = `Конфета ${candyValue}`;
+                            }
+                        } else {
+                            candy.src = `candy${candyValue}.png`;
+                            candy.alt = `Конфета ${candyValue}`;
+                        }
+                        
                         cell.appendChild(candy);
                     }
                     
@@ -883,12 +942,45 @@
             
             cell.innerHTML = '';
             
+            const candyValue = gameState.board[row][col];
+            
             // Добавляем конфету (если есть)
-            if (gameState.board[row][col] > 0) {
+            if (candyValue > 0) {
                 const candy = document.createElement('img');
                 candy.className = 'candy';
-                candy.src = `candy${gameState.board[row][col]}.png`;
-                candy.alt = `Конфета ${gameState.board[row][col]}`;
+                
+                // Проверяем, является ли конфета специальной
+                if (candyValue >= 50) {
+                    candy.classList.add('special');
+                    switch(candyValue) {
+                        case SPECIAL_CANDIES.BOMB:
+                            candy.src = 'bomb.png';
+                            candy.alt = 'Бомбочка';
+                            break;
+                        case SPECIAL_CANDIES.ARROW_UP:
+                            candy.src = 'arrow_up.png';
+                            candy.alt = 'Стрелка вверх';
+                            break;
+                        case SPECIAL_CANDIES.ARROW_RIGHT:
+                            candy.src = 'arrow_right.png';
+                            candy.alt = 'Стрелка вправо';
+                            break;
+                        case SPECIAL_CANDIES.ARROW_DOWN:
+                            candy.src = 'arrow_down.png';
+                            candy.alt = 'Стрелка вниз';
+                            break;
+                        case SPECIAL_CANDIES.ARROW_LEFT:
+                            candy.src = 'arrow_left.png';
+                            candy.alt = 'Стрелка влево';
+                            break;
+                        default:
+                            candy.src = `candy${candyValue}.png`;
+                            candy.alt = `Конфета ${candyValue}`;
+                    }
+                } else {
+                    candy.src = `candy${candyValue}.png`;
+                    candy.alt = `Конфета ${candyValue}`;
+                }
                 
                 // Анимация падения
                 if (gameState.fallFrom[`${row},${col}`]) {
@@ -901,7 +993,7 @@
                         candy.style.transform = 'translateY(0)';
                         setTimeout(() => {
                             candy.classList.remove('falling');
-                        }, 500);
+                        }, 300);
                     }, 10);
                 }
                 
@@ -929,6 +1021,13 @@
         // Выбор конфеты
         function selectCandy(row, col) {
             if (gameState.isProcessing) return;
+            
+            // Проверяем, является ли выбранная ячейка специальной конфетой
+            const candyValue = gameState.board[row][col];
+            if (candyValue >= 50) {
+                activateSpecial(row, col, candyValue);
+                return;
+            }
             
             // Проверяем, есть ли в ячейке препятствие
             const obstacle = getObstacleAt(row, col);
@@ -989,6 +1088,92 @@
             }
         }
         
+        // Активация специальной конфеты
+        function activateSpecial(row, col, type) {
+            if (gameState.isProcessing) return;
+            
+            gameState.isProcessing = true;
+            
+            const cellsToRemove = [];
+            let scoreToAdd = 0;
+            
+            // Добавляем саму специальную конфету
+            cellsToRemove.push([row, col]);
+            scoreToAdd += 50;
+            
+            // Определяем эффект в зависимости от типа конфеты
+            switch(type) {
+                case SPECIAL_CANDIES.BOMB: // Бомбочка
+                    // Взрываем соседние клетки
+                    const bombDirections = [[-1, 0], [1, 0], [0, -1], [0, 1]]; // Верх, низ, лево, право
+                    bombDirections.forEach(([dx, dy]) => {
+                        const newRow = row + dx;
+                        const newCol = col + dy;
+                        if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE) {
+                            cellsToRemove.push([newRow, newCol]);
+                            scoreToAdd += 20;
+                        }
+                    });
+                    break;
+                    
+                case SPECIAL_CANDIES.ARROW_UP: // Стрелка вверх
+                    for (let r = row - 1; r >= 0; r--) {
+                        cellsToRemove.push([r, col]);
+                        scoreToAdd += 10;
+                    }
+                    break;
+                    
+                case SPECIAL_CANDIES.ARROW_RIGHT: // Стрелка вправо
+                    for (let c = col + 1; c < BOARD_SIZE; c++) {
+                        cellsToRemove.push([row, c]);
+                        scoreToAdd += 10;
+                    }
+                    break;
+                    
+                case SPECIAL_CANDIES.ARROW_DOWN: // Стрелка вниз
+                    for (let r = row + 1; r < BOARD_SIZE; r++) {
+                        cellsToRemove.push([r, col]);
+                        scoreToAdd += 10;
+                    }
+                    break;
+                    
+                case SPECIAL_CANDIES.ARROW_LEFT: // Стрелка влево
+                    for (let c = col - 1; c >= 0; c--) {
+                        cellsToRemove.push([row, c]);
+                        scoreToAdd += 10;
+                    }
+                    break;
+            }
+            
+            // Удаляем конфеты и препятствия
+            cellsToRemove.forEach(([r, c]) => {
+                gameState.board[r][c] = 0;
+                removeObstacle(r, c);
+                updateCell(r, c);
+                
+                // Анимация удаления
+                const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+                if (cell) {
+                    const animation = document.createElement('div');
+                    animation.className = 'match-animation';
+                    cell.appendChild(animation);
+                    
+                    setTimeout(() => {
+                        animation.remove();
+                    }, 300);
+                }
+            });
+            
+            // Добавляем очки
+            gameState.score += scoreToAdd;
+            updateUI();
+            
+            // Сдвигаем конфеты
+            setTimeout(() => {
+                dropCandies();
+            }, 300);
+        }
+        
         // Обмен конфет местами с анимацией
         function swapCandies(row1, col1, row2, col2, callback) {
             // Меняем конфеты в массиве
@@ -1001,7 +1186,7 @@
             updateCell(row2, col2);
             
             // Вызываем callback после небольшой задержки для анимации
-            setTimeout(callback, 300);
+            setTimeout(callback, 200);
         }
         
         // Поиск совпадений
@@ -1013,7 +1198,7 @@
             for (let row = 0; row < BOARD_SIZE; row++) {
                 for (let col = 0; col < BOARD_SIZE - 2; col++) {
                     const candyType = gameState.board[row][col];
-                    if (candyType === 0) continue; // Пустая ячейка
+                    if (candyType === 0 || candyType >= 50) continue; // Пустая ячейка или спец. конфета
                     
                     if (candyType === gameState.board[row][col+1] && 
                         candyType === gameState.board[row][col+2]) {
@@ -1043,7 +1228,7 @@
             for (let row = 0; row < BOARD_SIZE - 2; row++) {
                 for (let col = 0; col < BOARD_SIZE; col++) {
                     const candyType = gameState.board[row][col];
-                    if (candyType === 0) continue; // Пустая ячейка
+                    if (candyType === 0 || candyType >= 50) continue; // Пустая ячейка или спец. конфета
                     
                     if (candyType === gameState.board[row+1][col] && 
                         candyType === gameState.board[row+2][col]) {
@@ -1085,11 +1270,49 @@
             // Удаляем совпавшие конфеты и добавляем очки
             let totalScore = 0;
             const matchedCells = [];
+            const specialCells = [];
             
             matches.forEach(match => {
                 // Добавляем очки за совпадение
                 const matchScore = 10 * match.length * gameState.level;
                 totalScore += matchScore;
+                
+                // Создаем специальную конфету для совпадений из 4 и более конфет
+                if (match.length >= 4) {
+                    // Выбираем центр совпадения для создания специальной конфеты
+                    const centerIndex = Math.floor(match.length / 2);
+                    const [centerRow, centerCol] = match[centerIndex];
+                    
+                    // Определяем тип специальной конфеты
+                    let specialType;
+                    if (match.length >= 5) {
+                        // Для 5+ конфет создаем бомбочку
+                        specialType = SPECIAL_CANDIES.BOMB;
+                    } else {
+                        // Для 4 конфет создаем стрелочку
+                        // Определяем направление ряда
+                        const isHorizontal = match[0][0] === match[1][0];
+                        if (isHorizontal) {
+                            // Горизонтальный ряд - стрелка влево или вправо
+                            specialType = Math.random() < 0.5 ? SPECIAL_CANDIES.ARROW_LEFT : SPECIAL_CANDIES.ARROW_RIGHT;
+                        } else {
+                            // Вертикальный ряд - стрелка вверх или вниз
+                            specialType = Math.random() < 0.5 ? SPECIAL_CANDIES.ARROW_UP : SPECIAL_CANDIES.ARROW_DOWN;
+                        }
+                    }
+                    
+                    specialCells.push({
+                        row: centerRow,
+                        col: centerCol,
+                        type: specialType
+                    });
+                    
+                    // Удаляем эту ячейку из списка на удаление
+                    const index = match.findIndex(([r, c]) => r === centerRow && c === centerCol);
+                    if (index !== -1) {
+                        match.splice(index, 1);
+                    }
+                }
                 
                 // Помечаем совпавшие конфеты для удаления
                 match.forEach(([row, col]) => {
@@ -1105,7 +1328,7 @@
                             
                             setTimeout(() => {
                                 animation.remove();
-                            }, 500);
+                            }, 300);
                         }
                     }
                 });
@@ -1154,9 +1377,15 @@
                     updateCell(row, col);
                 });
                 
-                // Сдвигаем конфеты вниз
+                // Добавляем специальные конфеты
+                specialCells.forEach(({row, col, type}) => {
+                    gameState.board[row][col] = type;
+                    updateCell(row, col);
+                });
+                
+                // Сдвигаем конфеты
                 dropCandies();
-            }, 500);
+            }, 300);
         }
         
         // Сдвиг конфет вниз
@@ -1225,11 +1454,11 @@
                                     generateBoard();
                                     renderBoard();
                                     gameState.isProcessing = false;
-                                }, 500);
+                                }, 300);
                             }
                         }
                     }
-                }, 500);
+                }, 300);
             } else {
                 gameState.isProcessing = false;
                 gameState.isSwapping = false;
@@ -1346,7 +1575,7 @@
             for (let row = 0; row < BOARD_SIZE; row++) {
                 for (let col = 0; col < BOARD_SIZE - 2; col++) {
                     const candyType = board[row][col];
-                    if (candyType === 0) continue; // Пустая ячейка
+                    if (candyType === 0 || candyType >= 50) continue; // Пустая ячейка или спец. конфета
                     
                     if (candyType === board[row][col+1] && 
                         candyType === board[row][col+2]) {
@@ -1376,7 +1605,7 @@
             for (let row = 0; row < BOARD_SIZE - 2; row++) {
                 for (let col = 0; col < BOARD_SIZE; col++) {
                     const candyType = board[row][col];
-                    if (candyType === 0) continue; // Пустая ячейка
+                    if (candyType === 0 || candyType >= 50) continue; // Пустая ячейка или спец. конфета
                     
                     if (candyType === board[row+1][col] && 
                         candyType === board[row+2][col]) {
