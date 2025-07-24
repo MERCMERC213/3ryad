@@ -81,3 +81,6 @@ function handleMatches() {
     handleMatches();
   }, 400);
 }
+
+// dummy export to avoid import error
+export const dummy = true;
