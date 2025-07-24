@@ -1070,6 +1070,66 @@ function findMatches() {
     return matches;
 }
 
+function showMobileTutorial() {
+  const isMobile = window.innerWidth <= 768;
+  
+  if (isMobile) {
+    const tutorialSteps = [
+      {title: "Новые препятствия!", content: "На этом уровне появляются новые виды препятствий..."},
+      {content: "❄️ <strong>Лед</strong> - растает от одного совпадения рядом"},
+      {content: "🕸️ <strong>Паутина</strong> - требует два совпадения рядом"},
+      {content: "🧊 <strong>Ледяной блок</strong> - требует три совпадения"},
+      {content: "📦 <strong>Ящик</strong> - разрушается от одного совпадения"},
+      {content: "🌵 <strong>Шипы</strong> - уменьшают очки при совпадении"},
+      {content: "🔒 <strong>Замок</strong> - блокирует конфету"},
+      {content: "🎁 <strong>Сундук</strong> - при открытии дает спецконфету"},
+      {content: "С каждым уровнем препятствий будет больше!"}
+    ];
+
+    let currentStep = 0;
+    
+    function showStep() {
+      const step = tutorialSteps[currentStep];
+      tutorialModal.innerHTML = `
+        <div class="modal-content">
+          ${step.title ? `<h2>${step.title}</h2>` : ''}
+          <div class="tutorial">
+            <p>${step.content}</p>
+          </div>
+          <div class="tutorial-controls">
+            ${currentStep > 0 ? `<button id="prevBtn">Назад</button>` : ''}
+            <button id="nextBtn">${currentStep === tutorialSteps.length - 1 ? 'Понятно!' : 'Далее'}</button>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('nextBtn').addEventListener('click', () => {
+        if (currentStep < tutorialSteps.length - 1) {
+          currentStep++;
+          showStep();
+        } else {
+          tutorialModal.classList.add('hidden');
+          gameState.tutorialShown = true;
+          saveGameState();
+        }
+      });
+      
+      if (currentStep > 0) {
+        document.getElementById('prevBtn').addEventListener('click', () => {
+          currentStep--;
+          showStep();
+        });
+      }
+    }
+    
+    tutorialModal.classList.remove('hidden');
+    showStep();
+  } else {
+    // Стандартное обучение для десктопа
+    tutorialModal.classList.remove('hidden');
+  }
+}
+
 // Обработка совпадений и препятствий
 function processMatches(matches) {
     if (matches.length === 0) {
