@@ -1,15 +1,152 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Match 3 MVP</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Игра 3 в ряд</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1 class="title">3 в ряд</h1>
-  <div id="grid"></div>
+    <div class="container">
+        <header>
+            <h1>ТРИ В РЯД</h1>
+        </header>
+        
+        <div class="game-info">
+            <div class="info-item">
+                <div class="info-label">УРОВЕНЬ</div>
+                <div class="info-value" id="level">1</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">ОЧКИ</div>
+                <div class="info-value" id="score">0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">ЦЕЛЬ</div>
+                <div class="info-value" id="target">1000</div>
+            </div>
+        </div>
+        
+        <div class="level-bar">
+            <div class="level-progress" id="levelProgress"></div>
+        </div>
+        
+        <div class="game-board-container">
+            <div class="game-board" id="gameBoard"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="newGameBtn">Новая игра</button>
+        </div>
+        
+        <div class="best-score">
+            Ваш лучший результат: <span class="best-score-value" id="bestScore">0</span>
+        </div>
+        
+        <div class="footer">
+            Прогресс сохраняется автоматически
+        </div>
+    </div>
+    
+    <div class="modal hidden" id="levelCompleteModal">
+        <div class="modal-content">
+            <h2>Уровень <span id="completedLevel">1</span> пройден!</h2>
+            <p>Вы набрали <span id="levelScore">0</span> очков</p>
+            <button id="continueBtn">Продолжить</button>
+        </div>
+    </div>
+    
+    <div class="modal hidden" id="tutorialModal">
+        <div class="modal-content">
+            <h2>Новые препятствия!</h2>
+            <div class="tutorial">
+                <p>На этом уровне появляются новые виды препятствий:</p>
+                
+                <div class="obstacle-example">
+                    <div class="obstacle-item">
+                        <div class="obstacle-demo">
+                            <div class="ice-overlay"></div>
+                        </div>
+                        <div class="obstacle-label">Лед</div>
+                    </div>
+                    <div class="obstacle-item">
+                        <div class="obstacle-demo">
+                            <div class="web-overlay"></div>
+                        </div>
+                        <div class="obstacle-label">Паутина</div>
+                    </div>
+                    <div class="obstacle-item">
+                        <div class="obstacle-demo">
+                            <div class="ice-block"></div>
+                        </div>
+                        <div class="obstacle-label">Ледяной блок</div>
+                    </div>
+                    <div class="obstacle-item">
+                        <div class="obstacle-demo">
+                            <div class="wooden-crate"></div>
+                        </div>
+                        <div class="obstacle-label">Ящик</div>
+                    </div>
+                    <div class="obstacle-item">
+                        <div class="obstacle-demo">
+                            <div class="thorns"></div>
+                        </div>
+                        <div class="obstacle-label">Шипы</div>
+                    </div>
+                    <div class="obstacle-item">
+                        <div class="obstacle-demo">
+                            <div class="lock"></div>
+                        </div>
+                        <div class="obstacle-label">Замок</div>
+                    </div>
+                    <div class="obstacle-item">
+                        <div class="obstacle-demo">
+                            <div class="chest"></div>
+                        </div>
+                        <div class="obstacle-label">Сундук</div>
+                    </div>
+                </div>
+                
+                <h3>Как их преодолеть:</h3>
+                <p>❄️ <strong>Лед</strong> - растает от одного совпадения рядом</p>
+                <p>🕸️ <strong>Паутина</strong> - требует два совпадения рядом, чтобы исчезнуть</p>
+                <p>🧊 <strong>Ледяной блок</strong> - требует три совпадения рядом</p>
+                <p>📦 <strong>Ящик</strong> - разрушается от одного совпадения рядом</p>
+                <p>🌵 <strong>Шипы</strong> - уменьшают очки при совпадении на этой клетке</p>
+                <p>🔒 <strong>Замок</strong> - блокирует конфету, пока не будет разрушен</p>
+                <p>🎁 <strong>Сундук</strong> - при открытии дает спецконфету</p>
+                <p>С каждым уровнем препятствий будет больше!</p>
+            </div>
+            <button id="tutorialBtn">Понятно!</button>
+        </div>
+    </div>
+    
+    <div class="modal hidden" id="pauseModal">
+        <div class="modal-content">
+            <h2>ПАУЗА</h2>
+            <p>Игра приостановлена</p>
+            <button id="resumeBtn">Продолжить</button>
+        </div>
+    </div>
+    
+    <div class="modal hidden" id="analyticsModal">
+        <div class="modal-content">
+            <h2>📊 Статистика игры</h2>
+            <div class="analytics-content">
+                <p><strong>Сегодня:</strong> <span id="todayStats">Загрузка...</span></p>
+                <p><strong>Всего игр:</strong> <span id="totalGames">0</span></p>
+                <p><strong>Общее время:</strong> <span id="totalPlaytime">0 мин</span></p>
+                <p><strong>Среднее время:</strong> <span id="avgPlaytime">0 мин</span></p>
+                <p><strong>Последняя игра:</strong> <span id="lastSession">Никогда</span></p>
+            </div>
+            <button id="closeAnalyticsBtn">Закрыть</button>
+        </div>
+    </div>
+    
+    <div class="level-up hidden" id="levelUp">УРОВЕНЬ ПРОЙДЕН!</div>
+    
+    <button id="analyticsBtn" class="analytics-btn">📊</button>
 
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
