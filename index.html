@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Match-3 Game</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="menu" class="menu">
+    <h1>Match-3 Game</h1>
+    <button onclick="startGame()">Start</button>
+    <button onclick="showRules()">Rules</button>
+    <button onclick="showStats()">Stats</button>
+    <button onclick="toggleTheme()">Toggle Theme</button>
+  </div>
+
+  <div id="game-container" class="hidden">
+    <div id="level-indicator">Level: 1</div>
+    <div id="grid"></div>
+    <button id="hint-button" onclick="showHint()" disabled>Hint (3:00)</button>
+  </div>
+
+  <div id="modal" class="hidden">
+    <div class="modal-content" id="modal-content"></div>
+    <button onclick="closeModal()">Close</button>
+  </div>
+
+  <script type="module" src="./scripts/main.js"></script>
+</body>
+</html>
